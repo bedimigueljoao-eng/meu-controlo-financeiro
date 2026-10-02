@@ -1,8 +1,19 @@
 const KEY='meu-controlo-pwa-v1';
 const seed={locations:[],subs:[],people:[],moves:[],debts:[]};
-let data=load(),view='dashboard',drill=null,deferredPrompt=null;
+let data=cleanOrphanedRecords(load()),view='dashboard',drill=null,deferredPrompt=null;
 function load(){try{return JSON.parse(localStorage.getItem(KEY))||structuredClone(seed)}catch{return structuredClone(seed)}}
-function save(){localStorage.setItem(KEY,JSON.stringify(data));render()}
+function save(){data=cleanOrphanedRecords(data);localStorage.setItem(KEY,JSON.stringify(data));render()}
+function cleanOrphanedRecords(current){
+  const safe=current&&typeof current==='object'?current:structuredClone(seed);
+  safe.locations=Array.isArray(safe.locations)?safe.locations:[];
+  safe.subs=Array.isArray(safe.subs)?safe.subs:[];
+  safe.people=Array.isArray(safe.people)?safe.people:[];
+  safe.moves=Array.isArray(safe.moves)?safe.moves:[];
+  safe.debts=Array.isArray(safe.debts)?safe.debts:[];
+  const subIds=new Set(safe.subs.map(x=>x.id));
+  safe.moves=safe.moves.filter(m=>m.owner!=='personal'||subIds.has(m.subId));
+  return safe;
+}
 const id=()=>crypto.randomUUID();
 const kz=v=>new Intl.NumberFormat('pt-AO',{style:'currency',currency:'AOA',maximumFractionDigits:0}).format(Number(v||0)).replace('AOA','Kz');
 const signed=m=>m.type==='in'?Number(m.amount):-Number(m.amount);
@@ -39,7 +50,7 @@ function thirdModal(personId){if(!data.locations.length)return alert('Crie prime
 function repaymentModal(mid){const loan=data.moves.find(m=>m.id===mid),pending=loan.amount-(loan.received||0),internal=loan.borrowerType==='internal';modal(`Pagamento de ${esc(loan.borrower)}`,`<form id="f"><div class="notice">Pendente: <b>${kz(pending)}</b></div>${field('Valor recebido','amount','number',`min="1" max="${pending}" required`)}${field('Data','date','date',`value="${new Date().toISOString().slice(0,10)}" required`)}${internal?select('Sai de qual local do devedor?','sourceLocationId',locationOptions()):''}${select('Onde o credor recebe?','locationId',locationOptions())}<button class="btn primary">Confirmar</button></form>`);document.querySelector('#f').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),a=Number(f.get('amount'));if(a>pending||a<=0)return;if(internal){const source=f.get('sourceLocationId'),available=data.moves.filter(m=>m.owner==='third'&&m.personId===loan.borrowerId&&m.locationId===source).reduce((s,m)=>s+signed(m),0);if(a>available)return alert('Saldo insuficiente na conta do devedor.');data.moves.unshift({id:id(),owner:'third',personId:loan.borrowerId,type:'out',amount:a,date:f.get('date'),desc:`Pagamento de empréstimo a ${data.people.find(p=>p.id===loan.personId)?.name}`,locationId:source,loanId:loan.id,transferRole:'repayment-out'});const debt=data.debts.find(d=>d.linkedLoanId===loan.id);if(debt)debt.paid=(debt.paid||0)+a}loan.received=(loan.received||0)+a;data.moves.unshift({id:id(),owner:'third',personId:loan.personId,type:'in',amount:a,date:f.get('date'),desc:`Pagamento recebido de ${loan.borrower}`,locationId:f.get('locationId'),loanId:loan.id,transferRole:'repayment-in'});closeModal();save()}}
 function payDebt(did){const d=data.debts.find(x=>x.id===did),p=d.total-d.paid,a=Number(prompt(`Valor do pagamento. Pendente: ${kz(p)}`));if(a>0&&a<=p){d.paid+=a;save()}}
 function deleteLocation(lid){const l=data.locations.find(x=>x.id===lid);if(l&&confirm(`Eliminar o local “${l.name}”? O histórico será mantido como Local removido.`)){data.locations=data.locations.filter(x=>x.id!==lid);save()}}
-function deleteSub(sid){const x=data.subs.find(s=>s.id===sid);if(x&&confirm(`Eliminar a subconta “${x.name}”? O histórico será mantido.`)){data.subs=data.subs.filter(s=>s.id!==sid);save()}}
+function deleteSub(sid){const x=data.subs.find(s=>s.id===sid);if(!x)return;const linked=data.moves.filter(m=>m.owner==='personal'&&m.subId===sid);const balance=linked.reduce((total,m)=>total+signed(m),0);const message=linked.length?`Eliminar a subconta “${x.name}” e os seus ${linked.length} movimento(s)? O saldo de ${kz(balance)} também será retirado do Meu dinheiro e dos locais associados.`:`Eliminar a subconta “${x.name}”?`;if(confirm(message)){data.moves=data.moves.filter(m=>!(m.owner==='personal'&&m.subId===sid));data.subs=data.subs.filter(s=>s.id!==sid);save()}}
 function deletePerson(pid){const x=data.people.find(p=>p.id===pid);if(x&&confirm(`Eliminar a conta de “${x.name}”? O histórico será mantido.`)){data.people=data.people.filter(p=>p.id!==pid);save()}}
 function empty(t){return `<div class="empty">${t}</div>`}
 function esc(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
