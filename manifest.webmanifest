@@ -1,15 +1,1 @@
-{
-  "name":"Meu Controlo Financeiro",
-  "short_name":"Meu Controlo",
-  "description":"Controlo financeiro pessoal, dividas, subcontas e dinheiro de outrem.",
-  "start_url":"./",
-  "scope":"./",
-  "display":"standalone",
-  "background_color":"#f4f7f6",
-  "theme_color":"#082c26",
-  "orientation":"portrait-primary",
-  "icons":[
-    {"src":"./icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
-    {"src":"./icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
-  ]
-}
+{"name":"Meu Controlo Financeiro","short_name":"Meu Controlo","start_url":"./","scope":"./","display":"standalone","background_color":"#f4f7f6","theme_color":"#063b32","description":"Controlo financeiro, dívidas, empréstimos e dinheiro de outrem.","icons":[{"src":"icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},{"src":"icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}
